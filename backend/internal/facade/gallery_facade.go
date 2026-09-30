@@ -30,44 +30,47 @@ func galleryCtx() context.Context {
 	return WailsContext
 }
 
-// LoadGalleryFromFrontend 返回全部照片（按存储顺序）。
-func (f *GalleryFacade) LoadGalleryFromFrontend() ([]domain.GalleryPhoto, error) {
-	return f.svc().LoadPhotos(galleryCtx())
+// LoadGalleryFromFrontend 返回相册数据（排序方式 + 照片列表）。
+func (f *GalleryFacade) LoadGalleryFromFrontend() (*domain.GalleryData, error) {
+	return f.svc().LoadData(galleryCtx())
 }
 
-// AddPhotoByFileFromFrontend 从文件对话框选择的本地图片新增照片（自动压缩为 WebP）。
-func (f *GalleryFacade) AddPhotoByFileFromFrontend(sourcePath string, description string) ([]domain.GalleryPhoto, error) {
+// AddPhotoByFileFromFrontend 从文件对话框选择的本地图片新增照片。
+// 自动提取 EXIF 并压缩为 WebP。
+func (f *GalleryFacade) AddPhotoByFileFromFrontend(sourcePath string) ([]domain.GalleryPhoto, error) {
 	ctx := galleryCtx()
 	svc := f.svc()
-	image, err := svc.SaveImageFile(ctx, sourcePath)
+	image, meta, err := svc.SaveImageFile(ctx, sourcePath)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := svc.AddPhoto(ctx, image, description); err != nil {
+	meta.Image = image
+	if _, err := svc.AddPhoto(ctx, meta); err != nil {
 		return nil, err
 	}
 	return svc.LoadPhotos(ctx)
 }
 
 // AddPhotoByBytesFromFrontend 从粘贴/拖拽的图片字节新增照片（base64 传入）。
-func (f *GalleryFacade) AddPhotoByBytesFromFrontend(name string, dataBase64 string, description string) ([]domain.GalleryPhoto, error) {
+func (f *GalleryFacade) AddPhotoByBytesFromFrontend(name string, dataBase64 string) ([]domain.GalleryPhoto, error) {
 	ctx := galleryCtx()
 	svc := f.svc()
 	data, err := base64.StdEncoding.DecodeString(dataBase64)
 	if err != nil {
 		return nil, err
 	}
-	image, err := svc.SaveImageBytes(ctx, name, data)
+	image, meta, err := svc.SaveImageBytes(ctx, name, data)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := svc.AddPhoto(ctx, image, description); err != nil {
+	meta.Image = image
+	if _, err := svc.AddPhoto(ctx, meta); err != nil {
 		return nil, err
 	}
 	return svc.LoadPhotos(ctx)
 }
 
-// UpdatePhotoFromFrontend 更新描述等字段。
+// UpdatePhotoFromFrontend 更新标题 / 地点等字段。
 func (f *GalleryFacade) UpdatePhotoFromFrontend(photo domain.GalleryPhoto) ([]domain.GalleryPhoto, error) {
 	ctx := galleryCtx()
 	svc := f.svc()
@@ -87,7 +90,7 @@ func (f *GalleryFacade) DeletePhotoFromFrontend(id string) ([]domain.GalleryPhot
 	return svc.LoadPhotos(ctx)
 }
 
-// ReorderPhotosFromFrontend 按给定 ID 顺序重排。
+// ReorderPhotosFromFrontend 按给定 ID 顺序重排（手动排序）。
 func (f *GalleryFacade) ReorderPhotosFromFrontend(ids []string) ([]domain.GalleryPhoto, error) {
 	ctx := galleryCtx()
 	svc := f.svc()
@@ -105,4 +108,14 @@ func (f *GalleryFacade) SetCoverFromFrontend(id string) ([]domain.GalleryPhoto, 
 		return nil, err
 	}
 	return svc.LoadPhotos(ctx)
+}
+
+// SetSortFromFrontend 设置站点相册页的图片排序方式。
+func (f *GalleryFacade) SetSortFromFrontend(sort string) (*domain.GalleryData, error) {
+	ctx := galleryCtx()
+	svc := f.svc()
+	if err := svc.SetSort(ctx, sort); err != nil {
+		return nil, err
+	}
+	return svc.LoadData(ctx)
 }

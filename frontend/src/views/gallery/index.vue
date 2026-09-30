@@ -1,15 +1,28 @@
 <template>
   <div class="h-full flex flex-col p-6 overflow-hidden" @dragover.prevent @drop.prevent="onDrop">
-    <header class="flex items-center justify-between mb-3">
+    <header class="flex items-center justify-between mb-3 gap-4">
       <div class="flex items-center gap-2">
         <PhotoIcon class="w-6 h-6" />
         <h1 class="text-lg font-semibold">{{ t('gallery.title') }}</h1>
         <span class="text-sm text-muted-foreground">{{ t('gallery.count', { n: galleryStore.total }) }}</span>
       </div>
-      <Button class="gap-2" @click="pickFiles">
-        <ArrowUpTrayIcon class="w-4 h-4" />
-        {{ t('gallery.upload') }}
-      </Button>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-muted-foreground">{{ t('gallery.sort') }}</span>
+          <Select :model-value="galleryStore.sort" @update:model-value="onSortChange">
+            <SelectTrigger class="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button class="gap-2" @click="pickFiles">
+          <ArrowUpTrayIcon class="w-4 h-4" />
+          {{ t('gallery.upload') }}
+        </Button>
+      </div>
     </header>
 
     <p class="text-xs text-muted-foreground mb-4">{{ t('gallery.hint') }}</p>
@@ -21,7 +34,7 @@
     </div>
 
     <div v-else class="flex-1 overflow-auto">
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
         <div v-for="(photo, index) in galleryStore.photos" :key="photo.id"
           class="group relative rounded-lg border bg-card overflow-hidden" draggable="true"
           @dragstart="onItemDragStart(index)" @dragover.prevent @drop.stop.prevent="onItemDrop(index)"
@@ -44,9 +57,20 @@
               <span class="cursor-move text-white/90" :title="t('gallery.dragHint')"><Bars3Icon class="w-4 h-4" /></span>
             </div>
           </div>
-          <div class="p-2">
-            <Input v-model="photo.description" :placeholder="t('gallery.descPlaceholder')"
+          <div class="p-2 space-y-1.5">
+            <Input v-model="photo.title" :placeholder="t('gallery.fieldTitle')"
               @blur="galleryStore.updatePhoto(photo)" @keyup.enter="galleryStore.updatePhoto(photo)" />
+            <Input v-model="photo.location" :placeholder="t('gallery.fieldLocation')"
+              @blur="galleryStore.updatePhoto(photo)" @keyup.enter="galleryStore.updatePhoto(photo)" />
+            <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] leading-4 text-muted-foreground">
+              <span v-if="photo.takenAt">{{ fmtDate(photo.takenAt) }}</span>
+              <span v-if="cameraText(photo)">{{ cameraText(photo) }}</span>
+              <span v-if="photo.focalLength">{{ photo.focalLength }}</span>
+              <span v-if="photo.aperture">{{ photo.aperture }}</span>
+              <span v-if="photo.shutter">{{ photo.shutter }}</span>
+              <span v-if="photo.iso">{{ photo.iso }}</span>
+              <span v-if="photo.width">{{ photo.width }}×{{ photo.height }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -55,13 +79,14 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGalleryStore } from '@/stores/gallery'
 import { useSiteStore } from '@/stores/site'
 import { useImageUrl } from '@/composables/useImageUrl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PhotoIcon, ArrowUpTrayIcon, StarIcon, TrashIcon, Bars3Icon } from '@heroicons/vue/24/outline'
 
 const { t } = useI18n()
@@ -69,11 +94,32 @@ const galleryStore = useGalleryStore()
 const siteStore = useSiteStore()
 const { getImageUrl } = useImageUrl()
 
+const sortOptions = computed(() => [
+  { value: 'manual', label: t('gallery.sortManual') },
+  { value: 'time-desc', label: t('gallery.sortTimeDesc') },
+  { value: 'time-asc', label: t('gallery.sortTimeAsc') },
+])
+
 const imgUrl = (p: string): string => {
   if (!p) return ''
   if (p.startsWith('http') || p.startsWith('data:')) return p
   if (p.startsWith('/images/')) return getImageUrl(`${siteStore.site.appDir}${p}`)
   return getImageUrl(p)
+}
+
+const cameraText = (p: { cameraMake: string; cameraModel: string }) =>
+  [p.cameraMake, p.cameraModel].filter(Boolean).join(' ')
+
+const fmtDate = (s: string): string => {
+  if (!s) return ''
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return s
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function onSortChange(value: string) {
+  galleryStore.setSort(value)
 }
 
 async function pickFiles() {

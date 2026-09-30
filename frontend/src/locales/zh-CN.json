@@ -928,6 +928,12 @@
     "delete": "删除",
     "deleteConfirm": "确定删除这张照片？删除后本地图片文件也会被移除。",
     "descPlaceholder": "添加描述…",
-    "dragHint": "拖动排序"
+    "dragHint": "拖动排序",
+    "sort": "排序",
+    "sortManual": "手动",
+    "sortTimeDesc": "时间（新→旧）",
+    "sortTimeAsc": "时间（旧→新）",
+    "fieldTitle": "标题",
+    "fieldLocation": "地点"
   }
 }

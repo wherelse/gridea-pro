@@ -20,6 +20,7 @@ require (
 	github.com/minio/selfupdate v0.6.0
 	github.com/mozillazg/go-pinyin v0.21.0
 	github.com/pkg/sftp v1.13.10
+	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/tdewolff/minify/v2 v2.24.10
 	github.com/typomedia/lessgo v0.1.1
 	github.com/wailsapp/wails/v2 v2.12.0

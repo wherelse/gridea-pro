@@ -14,6 +14,7 @@ import (
 	htmlTemplate "html/template"
 	"log/slog"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -743,6 +744,22 @@ func (b *TemplateDataBuilder) buildGalleryViews(ctx context.Context, config doma
 		return nil
 	}
 
+	// 输出排序：手动 / 拍摄时间新→旧 / 旧→新
+	sortMode := domain.GallerySortManual
+	if s, err := b.galleryRepo.GetSort(ctx); err == nil && s != "" {
+		sortMode = s
+	}
+	switch sortMode {
+	case domain.GallerySortTimeDesc:
+		sort.SliceStable(photos, func(i, j int) bool {
+			return galleryTime(photos[i]).After(galleryTime(photos[j]))
+		})
+	case domain.GallerySortTimeAsc:
+		sort.SliceStable(photos, func(i, j int) bool {
+			return galleryTime(photos[i]).Before(galleryTime(photos[j]))
+		})
+	}
+
 	dateFormat := config.DateFormat
 	if dateFormat == "" {
 		dateFormat = "2006-01-02"
@@ -750,17 +767,45 @@ func (b *TemplateDataBuilder) buildGalleryViews(ctx context.Context, config doma
 
 	views := make([]template.GalleryView, 0, len(photos))
 	for _, p := range photos {
+		takenAt := ""
+		takenAtISO := ""
+		if !p.TakenAt.IsZero() {
+			takenAt = formatDate(p.TakenAt, dateFormat)
+			takenAtISO = p.TakenAt.Format("2006-01-02")
+		}
+		camera := strings.TrimSpace(p.CameraMake + " " + p.CameraModel)
 		views = append(views, template.GalleryView{
 			ID:           p.ID,
 			Image:        p.Image,
-			Description:  p.Description,
-			IsTop:        p.IsTop,
+			Title:        p.Title,
+			Location:     p.Location,
+			TakenAt:      takenAt,
+			TakenAtISO:   takenAtISO,
 			CreatedAt:    formatDate(p.CreatedAt, dateFormat),
 			CreatedAtISO: p.CreatedAt.Format("2006-01-02"),
 			DateFormat:   dateFormat,
+			Camera:       camera,
+			CameraMake:   p.CameraMake,
+			CameraModel:  p.CameraModel,
+			Lens:         p.Lens,
+			Aperture:     p.Aperture,
+			Shutter:      p.Shutter,
+			ISO:          p.ISO,
+			FocalLength:  p.FocalLength,
+			Width:        p.Width,
+			Height:       p.Height,
+			IsTop:        p.IsTop,
 		})
 	}
 	return views
+}
+
+// galleryTime 拍摄时间优先，缺省回退入库时间
+func galleryTime(p domain.GalleryPhoto) time.Time {
+	if !p.TakenAt.IsZero() {
+		return p.TakenAt
+	}
+	return p.CreatedAt
 }
 
 // toJSON 将 map 转换为 JSON 字符串（用于 JS 调用）

@@ -709,6 +709,12 @@
     "delete": "刪除",
     "deleteConfirm": "確定刪除這張照片？刪除後本機圖片檔案也會一併移除。",
     "descPlaceholder": "新增描述…",
-    "dragHint": "拖曳排序"
+    "dragHint": "拖曳排序",
+    "sort": "排序",
+    "sortManual": "手動",
+    "sortTimeDesc": "時間（新→舊）",
+    "sortTimeAsc": "時間（舊→新）",
+    "fieldTitle": "標題",
+    "fieldLocation": "地點"
   }
 }

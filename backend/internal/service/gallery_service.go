@@ -3,7 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,9 +20,10 @@ import (
 	"gridea-pro/backend/internal/webpconvert"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/rwcarlsen/goexif/exif"
 )
 
-// GalleryService 相册业务逻辑：照片增删改查 + 图片落盘（统一压缩为 WebP）。
+// GalleryService 相册业务逻辑：照片增删改查 + 图片落盘（统一压缩为 WebP）+ EXIF 提取。
 type GalleryService struct {
 	repo   domain.GalleryRepository
 	appDir string
@@ -39,18 +45,34 @@ func (s *GalleryService) LoadPhotos(ctx context.Context) ([]domain.GalleryPhoto,
 	return s.repo.List(ctx)
 }
 
-// AddPhoto 新增照片记录（置顶到列表最前）。
-func (s *GalleryService) AddPhoto(ctx context.Context, image, description string) (*domain.GalleryPhoto, error) {
-	if strings.TrimSpace(image) == "" {
+func (s *GalleryService) LoadData(ctx context.Context) (*domain.GalleryData, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	photos, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sort, err := s.repo.GetSort(ctx)
+	if err != nil {
+		sort = domain.GallerySortManual
+	}
+	return &domain.GalleryData{Sort: sort, Photos: photos}, nil
+}
+
+func (s *GalleryService) SetSort(ctx context.Context, sort string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.repo.SetSort(ctx, sort)
+}
+
+// AddPhoto 新增照片（置顶到列表最前）。
+func (s *GalleryService) AddPhoto(ctx context.Context, photo domain.GalleryPhoto) (*domain.GalleryPhoto, error) {
+	if strings.TrimSpace(photo.Image) == "" {
 		return nil, fmt.Errorf("image is empty")
 	}
 	now := time.Now()
-	photo := domain.GalleryPhoto{
-		Image:       image,
-		Description: description,
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}
+	photo.CreatedAt = now
+	photo.UpdatedAt = now
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -66,7 +88,7 @@ func (s *GalleryService) AddPhoto(ctx context.Context, image, description string
 	return &photos[0], nil
 }
 
-// UpdatePhoto 更新描述 / 图片 / 置顶标记。
+// UpdatePhoto 更新标题 / 地点 / 图片。
 func (s *GalleryService) UpdatePhoto(ctx context.Context, photo domain.GalleryPhoto) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -79,9 +101,8 @@ func (s *GalleryService) UpdatePhoto(ctx context.Context, photo domain.GalleryPh
 	found := false
 	for i := range photos {
 		if photos[i].ID == photo.ID {
-			if strings.TrimSpace(photo.Description) != "" || photo.Description == "" {
-				photos[i].Description = photo.Description
-			}
+			photos[i].Title = photo.Title
+			photos[i].Location = photo.Location
 			if strings.TrimSpace(photo.Image) != "" {
 				photos[i].Image = photo.Image
 			}
@@ -158,7 +179,6 @@ func (s *GalleryService) ReorderPhotos(ctx context.Context, ids []string) error 
 			delete(byID, id)
 		}
 	}
-	// 未出现在 ids 中的（防御）追加在末尾，保持原相对顺序
 	for _, p := range photos {
 		if _, ok := byID[p.ID]; ok {
 			reordered = append(reordered, p)
@@ -192,22 +212,98 @@ func (s *GalleryService) SetCover(ctx context.Context, id string) error {
 	return s.repo.SaveAll(ctx, photos)
 }
 
-// SaveImageFile 把磁盘上的图片复制进相册目录（可转换格式自动转 WebP），返回站点相对路径。
-func (s *GalleryService) SaveImageFile(ctx context.Context, sourcePath string) (string, error) {
+// ExtractMetadata 从图片文件读取 EXIF / 尺寸，返回仅填充了元信息（不含 ID/Image）的 GalleryPhoto。
+func (s *GalleryService) ExtractMetadata(path string) domain.GalleryPhoto {
+	var p domain.GalleryPhoto
+
+	// 尺寸（用标准库解码，最可靠）
+	if f, err := os.Open(path); err == nil {
+		if cfg, _, err := image.DecodeConfig(f); err == nil {
+			p.Width = cfg.Width
+			p.Height = cfg.Height
+		}
+		_ = f.Close()
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return p
+	}
+	defer f.Close()
+
+	x, err := exif.Decode(f)
+	if err != nil {
+		return p
+	}
+
+	if t, err := x.DateTime(); err == nil {
+		p.TakenAt = t
+	}
+	p.CameraMake = exifString(x, exif.Make)
+	p.CameraModel = exifString(x, exif.Model)
+	p.Lens = exifString(x, exif.LensModel)
+
+	if tag, err := x.Get(exif.FNumber); err == nil {
+		if r, err := tag.Rat(0); err == nil {
+			v, _ := r.Float64()
+			p.Aperture = fmt.Sprintf("f/%.1f", v)
+		}
+	}
+	if tag, err := x.Get(exif.ExposureTime); err == nil {
+		if r, err := tag.Rat(0); err == nil {
+			v, _ := r.Float64()
+			if v > 0 && v < 1 {
+				p.Shutter = fmt.Sprintf("1/%ds", int(math.Round(1/v)))
+			} else if v >= 1 {
+				p.Shutter = fmt.Sprintf("%ds", int(math.Round(v)))
+			}
+		}
+	}
+	if tag, err := x.Get(exif.ISOSpeedRatings); err == nil {
+		if iso, err := tag.Int(0); err == nil {
+			p.ISO = fmt.Sprintf("ISO %d", iso)
+		}
+	}
+	if tag, err := x.Get(exif.FocalLength); err == nil {
+		if r, err := tag.Rat(0); err == nil {
+			v, _ := r.Float64()
+			p.FocalLength = fmt.Sprintf("%.0fmm", math.Round(v))
+		}
+	}
+
+	return p
+}
+
+func exifString(x *exif.Exif, name exif.FieldName) string {
+	tag, err := x.Get(name)
+	if err != nil {
+		return ""
+	}
+	v, err := tag.StringVal()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(strings.Trim(v, "\x00"))
+}
+
+// SaveImageFile 把磁盘上的图片复制进相册目录（可转换格式自动转 WebP），返回站点相对路径与 EXIF 元信息。
+func (s *GalleryService) SaveImageFile(ctx context.Context, sourcePath string) (string, domain.GalleryPhoto, error) {
 	info, err := os.Stat(sourcePath)
 	if err != nil {
-		return "", err
+		return "", domain.GalleryPhoto{}, err
 	}
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("%s is not a regular file", sourcePath)
+		return "", domain.GalleryPhoto{}, fmt.Errorf("%s is not a regular file", sourcePath)
 	}
-	return s.saveImageFromFile(sourcePath)
+	meta := s.ExtractMetadata(sourcePath)
+	image, err := s.saveImageFromFile(sourcePath)
+	return image, meta, err
 }
 
 // SaveImageBytes 保存前端粘贴/拖拽的图片字节（base64 解码后传入）。
-func (s *GalleryService) SaveImageBytes(ctx context.Context, name string, data []byte) (string, error) {
+func (s *GalleryService) SaveImageBytes(ctx context.Context, name string, data []byte) (string, domain.GalleryPhoto, error) {
 	if len(data) == 0 {
-		return "", fmt.Errorf("empty image data")
+		return "", domain.GalleryPhoto{}, fmt.Errorf("empty image data")
 	}
 	ext := strings.ToLower(filepath.Ext(name))
 	if ext == "" {
@@ -226,19 +322,22 @@ func (s *GalleryService) SaveImageBytes(ctx context.Context, name string, data [
 
 	tmp, err := os.CreateTemp("", "gallery-*"+ext)
 	if err != nil {
-		return "", err
+		return "", domain.GalleryPhoto{}, err
 	}
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return "", err
+		_ = tmp.Close()
+		return "", domain.GalleryPhoto{}, err
 	}
 	if err := tmp.Close(); err != nil {
-		return "", err
+		return "", domain.GalleryPhoto{}, err
 	}
-	return s.saveImageFromFile(tmpPath)
+
+	meta := s.ExtractMetadata(tmpPath)
+	image, err := s.saveImageFromFile(tmpPath)
+	return image, meta, err
 }
 
 // saveImageFromFile 落盘并（在可转换时）压缩为 WebP。

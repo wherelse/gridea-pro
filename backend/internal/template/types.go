@@ -166,13 +166,29 @@ type MemoView struct {
 
 // GalleryView 相册照片视图
 type GalleryView struct {
-	ID           string `json:"id"`
-	Image        string `json:"image"`
-	Description  string `json:"description"`
-	IsTop        bool   `json:"isTop"`
-	CreatedAt    string `json:"createdAt"`
+	ID       string `json:"id"`
+	Image    string `json:"image"`
+	Title    string `json:"title"`
+	Location string `json:"location"`
+
+	TakenAt      string `json:"takenAt"`    // 拍摄时间（按站点 DateFormat 格式化）
+	TakenAtISO   string `json:"takenAtISO"` // 拍摄时间 YYYY-MM-DD（稳定 key）
+	CreatedAt    string `json:"createdAt"`  // 入库时间（格式化）
 	CreatedAtISO string `json:"createdAtISO"`
 	DateFormat   string `json:"dateFormat"`
+
+	Camera      string `json:"camera"` // 品牌 + 型号
+	CameraMake  string `json:"cameraMake"`
+	CameraModel string `json:"cameraModel"`
+	Lens        string `json:"lens"`
+	Aperture    string `json:"aperture"`
+	Shutter     string `json:"shutter"`
+	ISO         string `json:"iso"`
+	FocalLength string `json:"focalLength"`
+	Width       int    `json:"width"`
+	Height      int    `json:"height"`
+
+	IsTop bool `json:"isTop"`
 }
 
 // CategoryView 分类视图

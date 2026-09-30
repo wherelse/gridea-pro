@@ -709,6 +709,12 @@
     "delete": "Delete",
     "deleteConfirm": "Delete this photo? The local image file will also be removed.",
     "descPlaceholder": "Add a description…",
-    "dragHint": "Drag to reorder"
+    "dragHint": "Drag to reorder",
+    "sort": "Sort",
+    "sortManual": "Manual",
+    "sortTimeDesc": "Time (newest)",
+    "sortTimeAsc": "Time (oldest)",
+    "fieldTitle": "Title",
+    "fieldLocation": "Location"
   }
 }

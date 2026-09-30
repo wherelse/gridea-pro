@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gridea-pro/backend/internal/domain"
+	"gridea-pro/backend/internal/utils"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
@@ -19,6 +20,7 @@ type galleryRepository struct {
 	mu     sync.RWMutex
 	appDir string
 	cache  []domain.GalleryPhoto
+	sort   string
 	loaded bool
 }
 
@@ -26,29 +28,67 @@ func NewGalleryRepository(appDir string) domain.GalleryRepository {
 	return &galleryRepository{
 		appDir: appDir,
 		cache:  make([]domain.GalleryPhoto, 0),
+		sort:   domain.GallerySortManual,
 		loaded: false,
 	}
 }
 
-// galleryPhotoDTO JSON 序列化 DTO（时间兼容 string / int64）
+// galleryPhotoDTO JSON 序列化 DTO（时间兼容 string / int64；Description 兼容旧数据）
 type galleryPhotoDTO struct {
 	ID          string      `json:"id"`
 	Image       string      `json:"image"`
-	Description string      `json:"description"`
+	Title       string      `json:"title"`
+	Description string      `json:"description,omitempty"`
+	Location    string      `json:"location"`
+	TakenAt     interface{} `json:"takenAt"`
+	CameraMake  string      `json:"cameraMake"`
+	CameraModel string      `json:"cameraModel"`
+	Lens        string      `json:"lens"`
+	Aperture    string      `json:"aperture"`
+	Shutter     string      `json:"shutter"`
+	ISO         string      `json:"iso"`
+	FocalLength string      `json:"focalLength"`
+	Width       int         `json:"width"`
+	Height      int         `json:"height"`
 	IsTop       bool        `json:"isTop"`
 	CreatedAt   interface{} `json:"createdAt"`
 	UpdatedAt   interface{} `json:"updatedAt"`
 }
 
+// parseTimeOrZero 与 parseTime 类似，但空值/无法识别时返回零值（用于拍摄时间）。
+func parseTimeOrZero(v interface{}) time.Time {
+	switch t := v.(type) {
+	case string:
+		if t == "" {
+			return time.Time{}
+		}
+		if parsed, err := utils.ParseTime(t, time.Local); err == nil {
+			return parsed
+		}
+		if t2, err := time.ParseInLocation(domain.TimeLayout, t, time.Local); err == nil {
+			return t2
+		}
+		return time.Time{}
+	case float64:
+		return time.UnixMilli(int64(t))
+	case int64:
+		return time.UnixMilli(t)
+	default:
+		return time.Time{}
+	}
+}
+
 func (r *galleryRepository) forceLoad() error {
 	dbPath := filepath.Join(r.appDir, "config", "gallery.json")
 	var db struct {
+		Sort   string             `json:"sort"`
 		Photos []galleryPhotoDTO `json:"photos"`
 	}
 
 	if err := LoadJSONFile(dbPath, &db); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			r.cache = []domain.GalleryPhoto{}
+			r.sort = domain.GallerySortManual
 			r.loaded = true
 			return nil
 		}
@@ -58,16 +98,35 @@ func (r *galleryRepository) forceLoad() error {
 
 	photos := make([]domain.GalleryPhoto, len(db.Photos))
 	for i, p := range db.Photos {
+		title := p.Title
+		if title == "" {
+			title = p.Description // 兼容旧的单字段 description
+		}
 		photos[i] = domain.GalleryPhoto{
 			ID:          p.ID,
 			Image:       p.Image,
-			Description: p.Description,
+			Title:       title,
+			Location:    p.Location,
+			TakenAt:     parseTimeOrZero(p.TakenAt),
+			CameraMake:  p.CameraMake,
+			CameraModel: p.CameraModel,
+			Lens:        p.Lens,
+			Aperture:    p.Aperture,
+			Shutter:     p.Shutter,
+			ISO:         p.ISO,
+			FocalLength: p.FocalLength,
+			Width:       p.Width,
+			Height:      p.Height,
 			IsTop:       p.IsTop,
 			CreatedAt:   parseTime(p.CreatedAt),
 			UpdatedAt:   parseTime(p.UpdatedAt),
 		}
 	}
 	r.cache = photos
+	r.sort = db.Sort
+	if !domain.IsValidGallerySort(r.sort) {
+		r.sort = domain.GallerySortManual
+	}
 	r.loaded = true
 	return nil
 }
@@ -94,17 +153,40 @@ func (r *galleryRepository) saveCache() error {
 
 	dtos := make([]galleryPhotoDTO, len(r.cache))
 	for i, p := range r.cache {
+		takenAt := ""
+		if !p.TakenAt.IsZero() {
+			takenAt = p.TakenAt.Local().Format(time.RFC3339)
+		}
 		dtos[i] = galleryPhotoDTO{
 			ID:          p.ID,
 			Image:       p.Image,
-			Description: p.Description,
+			Title:       p.Title,
+			Location:    p.Location,
+			TakenAt:     takenAt,
+			CameraMake:  p.CameraMake,
+			CameraModel: p.CameraModel,
+			Lens:        p.Lens,
+			Aperture:    p.Aperture,
+			Shutter:     p.Shutter,
+			ISO:         p.ISO,
+			FocalLength: p.FocalLength,
+			Width:       p.Width,
+			Height:      p.Height,
 			IsTop:       p.IsTop,
 			CreatedAt:   p.CreatedAt.Local().Format(time.RFC3339),
 			UpdatedAt:   p.UpdatedAt.Local().Format(time.RFC3339),
 		}
 	}
 
-	return SaveJSONFile(dbPath, map[string]interface{}{"photos": dtos})
+	sortVal := r.sort
+	if !domain.IsValidGallerySort(sortVal) {
+		sortVal = domain.GallerySortManual
+	}
+
+	return SaveJSONFile(dbPath, map[string]interface{}{
+		"sort":   sortVal,
+		"photos": dtos,
+	})
 }
 
 func ensureGalleryID(photo *domain.GalleryPhoto) {
@@ -245,7 +327,7 @@ func (r *galleryRepository) GetByID(ctx context.Context, id string) (*domain.Gal
 	return nil, fmt.Errorf("photo not found")
 }
 
-// List 按存储顺序（用户可拖动排序）返回副本。
+// List 按存储顺序（可用于手动排序）返回副本。
 func (r *galleryRepository) List(ctx context.Context) ([]domain.GalleryPhoto, error) {
 	if err := r.loadIfNeeded(); err != nil {
 		return nil, err
@@ -257,4 +339,34 @@ func (r *galleryRepository) List(ctx context.Context) ([]domain.GalleryPhoto, er
 	result := make([]domain.GalleryPhoto, len(r.cache))
 	copy(result, r.cache)
 	return result, nil
+}
+
+func (r *galleryRepository) GetSort(ctx context.Context) (string, error) {
+	if err := r.loadIfNeeded(); err != nil {
+		return "", err
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if !domain.IsValidGallerySort(r.sort) {
+		return domain.GallerySortManual, nil
+	}
+	return r.sort, nil
+}
+
+func (r *galleryRepository) SetSort(ctx context.Context, sort string) error {
+	if err := r.loadIfNeeded(); err != nil {
+		return err
+	}
+	if !domain.IsValidGallerySort(sort) {
+		sort = domain.GallerySortManual
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	original := r.sort
+	r.sort = sort
+	if err := r.saveCache(); err != nil {
+		r.sort = original
+		return err
+	}
+	return nil
 }
