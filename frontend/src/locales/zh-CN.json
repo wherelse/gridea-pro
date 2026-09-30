@@ -30,7 +30,8 @@
     "theme": "主 题",
     "server": "配 置",
     "about": "关 于",
-    "link": "友 链"
+    "link": "友 链",
+    "gallery": "相 册"
   },
   "dashboard": {
     "syncSuccess": "同步成功啦！",
@@ -915,5 +916,18 @@
     "copyHtmlSuccess": "已复制 HTML",
     "copyHtmlFailed": "复制 HTML 失败",
     "serializeFailed": "内容序列化失败，已保留上次正常内容，请检查最近的编辑（如复杂表格/公式）"
+  },
+  "gallery": {
+    "title": "相册",
+    "count": "共 {n} 张",
+    "upload": "上传图片",
+    "hint": "支持选择文件、拖拽或粘贴上传；上传时自动压缩为 WebP 并保存到站点 images/gallery/。",
+    "empty": "还没有照片",
+    "cover": "封面",
+    "setCover": "设为封面",
+    "delete": "删除",
+    "deleteConfirm": "确定删除这张照片？删除后本地图片文件也会被移除。",
+    "descPlaceholder": "添加描述…",
+    "dragHint": "拖动排序"
   }
 }

@@ -30,7 +30,8 @@
     "theme": "테마",
     "server": "설정",
     "about": "정보",
-    "link": "링크"
+    "link": "링크",
+    "gallery": "Gallery"
   },
   "dashboard": {
     "syncSuccess": "동기화 성공!",
@@ -696,5 +697,18 @@
     "copyHtmlSuccess": "HTML 복사됨",
     "copyHtmlFailed": "HTML 복사 실패",
     "serializeFailed": "콘텐츠 직렬화에 실패하여 마지막 정상 내용을 유지했습니다."
+  },
+  "gallery": {
+    "title": "Gallery",
+    "count": "{n} photos",
+    "upload": "Upload",
+    "hint": "Pick files, drag & drop, or paste. Uploads are compressed to WebP and stored in images/gallery/.",
+    "empty": "No photos yet",
+    "cover": "Cover",
+    "setCover": "Set as cover",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this photo? The local image file will also be removed.",
+    "descPlaceholder": "Add a description…",
+    "dragHint": "Drag to reorder"
   }
 }

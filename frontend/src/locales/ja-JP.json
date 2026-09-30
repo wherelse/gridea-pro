@@ -30,7 +30,8 @@
     "theme": "テーマ",
     "server": "設定",
     "about": "について",
-    "link": "リンク"
+    "link": "リンク",
+    "gallery": "Gallery"
   },
   "dashboard": {
     "syncSuccess": "同期が完了しました！",
@@ -696,5 +697,18 @@
     "copyHtmlSuccess": "HTML をコピーしました",
     "copyHtmlFailed": "HTML のコピーに失敗しました",
     "serializeFailed": "コンテンツのシリアライズに失敗しました。直前の正常な内容を保持しています。"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "count": "{n} photos",
+    "upload": "Upload",
+    "hint": "Pick files, drag & drop, or paste. Uploads are compressed to WebP and stored in images/gallery/.",
+    "empty": "No photos yet",
+    "cover": "Cover",
+    "setCover": "Set as cover",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this photo? The local image file will also be removed.",
+    "descPlaceholder": "Add a description…",
+    "dragHint": "Drag to reorder"
   }
 }

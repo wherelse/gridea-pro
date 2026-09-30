@@ -30,7 +30,8 @@
     "theme": "Тема",
     "server": "Сервер",
     "about": "О программе",
-    "link": "Ссылки"
+    "link": "Ссылки",
+    "gallery": "Gallery"
   },
   "dashboard": {
     "syncSuccess": "Синхронизация успешно выполнена!",
@@ -696,5 +697,18 @@
     "copyHtmlSuccess": "HTML скопирован",
     "copyHtmlFailed": "Не удалось скопировать HTML",
     "serializeFailed": "Не удалось сериализовать содержимое; сохранена последняя рабочая версия."
+  },
+  "gallery": {
+    "title": "Gallery",
+    "count": "{n} photos",
+    "upload": "Upload",
+    "hint": "Pick files, drag & drop, or paste. Uploads are compressed to WebP and stored in images/gallery/.",
+    "empty": "No photos yet",
+    "cover": "Cover",
+    "setCover": "Set as cover",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this photo? The local image file will also be removed.",
+    "descPlaceholder": "Add a description…",
+    "dragHint": "Drag to reorder"
   }
 }

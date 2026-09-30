@@ -9,6 +9,7 @@ import Theme from '@/views/theme/index.vue'
 import Setting from '@/views/settings/index.vue'
 import Comment from '@/views/comments/index.vue'
 import Memo from '@/views/memos/index.vue'
+import Gallery from '@/views/gallery/index.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -31,6 +32,11 @@ const routes: RouteRecordRaw[] = [
         path: '/memos',
         name: 'memos',
         component: Memo,
+      },
+      {
+        path: '/gallery',
+        name: 'gallery',
+        component: Gallery,
       },
       {
         path: '/menu',

@@ -30,7 +30,8 @@
     "theme": "Design",
     "server": "Server",
     "about": "Über",
-    "link": "Links"
+    "link": "Links",
+    "gallery": "Gallery"
   },
   "dashboard": {
     "syncSuccess": "Synchronisierung erfolgreich!",
@@ -696,5 +697,18 @@
     "copyHtmlSuccess": "HTML kopiert",
     "copyHtmlFailed": "HTML konnte nicht kopiert werden",
     "serializeFailed": "Inhalt konnte nicht serialisiert werden; letzte gültige Version beibehalten."
+  },
+  "gallery": {
+    "title": "Gallery",
+    "count": "{n} photos",
+    "upload": "Upload",
+    "hint": "Pick files, drag & drop, or paste. Uploads are compressed to WebP and stored in images/gallery/.",
+    "empty": "No photos yet",
+    "cover": "Cover",
+    "setCover": "Set as cover",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this photo? The local image file will also be removed.",
+    "descPlaceholder": "Add a description…",
+    "dragHint": "Drag to reorder"
   }
 }

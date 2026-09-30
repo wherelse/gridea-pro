@@ -409,6 +409,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCommentStore } from '@/stores/comment'
 import { useMemoStore } from '@/stores/memo'
+import { useGalleryStore } from '@/stores/gallery'
 import { useSiteStore } from '@/stores/site'
 import AppSystem from '@/views/preferences/index.vue'
 import { Button } from '@/components/ui/button'
@@ -438,6 +439,7 @@ import {
   ChatBubbleLeftRightIcon,
   CogIcon,
   LightBulbIcon,
+  PhotoIcon,
   ArrowRightIcon,
   ArrowUpCircleIcon,
   CheckCircleIcon,
@@ -452,6 +454,7 @@ const router = useRouter()
 const siteStore = useSiteStore()
 const commentStore = useCommentStore()
 const memoStore = useMemoStore()
+const galleryStore = useGalleryStore()
 console.log('MainLayout initialized, siteStore:', siteStore)
 
 const version = pkg.version
@@ -594,6 +597,12 @@ const sideMenus = computed(() => {
       text: t('nav.memo'),
       count: memoStore.totalMemos || 0,
       router: '/memos',
+    },
+    {
+      icon: PhotoIcon,
+      text: t('nav.gallery'),
+      count: galleryStore.total || 0,
+      router: '/gallery',
     },
     {
       icon: ChatBubbleLeftRightIcon,
@@ -942,6 +951,7 @@ onMounted(() => {
   // 初始化加载评论并开启全局轮询（用于更新侧边栏红点）
   commentStore.fetchComments()
   memoStore.fetchMemos()
+  galleryStore.fetchPhotos()
   const commentInterval = setInterval(() => {
     // 如果不在评论页面（避免与 Index.vue 的高频轮询重叠过多），则执行低频轮询
     if (route.path !== '/comments') {

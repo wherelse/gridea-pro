@@ -30,7 +30,8 @@
     "theme": "主題",
     "server": "設定",
     "about": "關於",
-    "link": "友鏈"
+    "link": "友鏈",
+    "gallery": "相 冊"
   },
   "dashboard": {
     "syncSuccess": "同步成功！",
@@ -696,5 +697,18 @@
     "copyHtmlSuccess": "已複製 HTML",
     "copyHtmlFailed": "複製 HTML 失敗",
     "serializeFailed": "內容序列化失敗，已保留上次正常內容，請檢查最近的編輯"
+  },
+  "gallery": {
+    "title": "相簿",
+    "count": "共 {n} 張",
+    "upload": "上傳圖片",
+    "hint": "支援選擇檔案、拖曳或貼上上傳；上傳時會自動壓縮為 WebP 並儲存到站點 images/gallery/。",
+    "empty": "尚無照片",
+    "cover": "封面",
+    "setCover": "設為封面",
+    "delete": "刪除",
+    "deleteConfirm": "確定刪除這張照片？刪除後本機圖片檔案也會一併移除。",
+    "descPlaceholder": "新增描述…",
+    "dragHint": "拖曳排序"
   }
 }
