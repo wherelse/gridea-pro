@@ -46,6 +46,9 @@ type TemplateData struct {
 	// 闪念列表（闪念页使用）
 	Memos []MemoView `json:"memos"`
 
+	// 相册照片（相册页 / 首页光影使用）
+	Photos []GalleryView `json:"photos"`
+
 	// 归档数据（按年份分组，归档页使用）
 	Archives []ArchiveYearView `json:"archives"`
 }
@@ -73,6 +76,7 @@ type ThemeConfigView struct {
 	CategoriesPath   string `json:"categoriesPath"`
 	LinkPath         string `json:"linkPath"`
 	MemosPath        string `json:"memosPath"`
+	GalleryPath      string `json:"galleryPath"`
 	ShowFeatureImage bool   `json:"showFeatureImage"`
 }
 
@@ -156,6 +160,17 @@ type MemoView struct {
 	CreatedAt string        `json:"createdAt"`
 	// CreatedAtISO 固定 YYYY-MM-DD 格式，供热力图/归档等需要稳定日期 key 的场景使用
 	// 不随用户配置的 DateFormat 变化
+	CreatedAtISO string `json:"createdAtISO"`
+	DateFormat   string `json:"dateFormat"`
+}
+
+// GalleryView 相册照片视图
+type GalleryView struct {
+	ID           string `json:"id"`
+	Image        string `json:"image"`
+	Description  string `json:"description"`
+	IsTop        bool   `json:"isTop"`
+	CreatedAt    string `json:"createdAt"`
 	CreatedAtISO string `json:"createdAtISO"`
 	DateFormat   string `json:"dateFormat"`
 }

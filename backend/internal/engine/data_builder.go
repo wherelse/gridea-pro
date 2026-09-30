@@ -30,6 +30,7 @@ type TemplateDataBuilder struct {
 	linkRepo     domain.LinkRepository
 	tagRepo      domain.TagRepository
 	memoRepo     domain.MemoRepository
+	galleryRepo  domain.GalleryRepository
 	categoryRepo domain.CategoryRepository
 
 	themeConfigService *ThemeConfigService
@@ -63,6 +64,7 @@ func (b *TemplateDataBuilder) SetCommentRepo(repo domain.CommentRepository) { b.
 func (b *TemplateDataBuilder) SetLinkRepo(repo domain.LinkRepository)       { b.linkRepo = repo }
 func (b *TemplateDataBuilder) SetTagRepo(repo domain.TagRepository)         { b.tagRepo = repo }
 func (b *TemplateDataBuilder) SetMemoRepo(repo domain.MemoRepository)       { b.memoRepo = repo }
+func (b *TemplateDataBuilder) SetGalleryRepo(repo domain.GalleryRepository) { b.galleryRepo = repo }
 func (b *TemplateDataBuilder) SetCategoryRepo(repo domain.CategoryRepository) {
 	b.categoryRepo = repo
 }
@@ -351,6 +353,7 @@ func (b *TemplateDataBuilder) Build(ctx context.Context, posts []domain.Post, co
 			CategoriesPath:   config.CategoriesPath,
 			LinkPath:         config.LinkPath,
 			MemosPath:        config.MemosPath,
+			GalleryPath:      config.GalleryPath,
 			ShowFeatureImage: true,
 		},
 		Site: template.SiteView{
@@ -361,6 +364,7 @@ func (b *TemplateDataBuilder) Build(ctx context.Context, posts []domain.Post, co
 		Tags:           allTags,
 		Categories:     allCategories,
 		Memos:          b.buildMemoViews(ctx, config),
+		Photos:         b.buildGalleryViews(ctx, config),
 		Menus:          menuViews,
 		CommentSetting: commentSettingView,
 		Pagination: template.PaginationView{
@@ -722,6 +726,38 @@ func (b *TemplateDataBuilder) buildMemoViews(ctx context.Context, config domain.
 			CreatedAt:    formatted,
 			CreatedAtISO: m.CreatedAt.Format("2006-01-02"),
 			DateFormat:   formatted,
+		})
+	}
+	return views
+}
+
+// buildGalleryViews 构建相册视图数据
+func (b *TemplateDataBuilder) buildGalleryViews(ctx context.Context, config domain.ThemeConfig) []template.GalleryView {
+	if b.galleryRepo == nil {
+		return nil
+	}
+
+	photos, err := b.galleryRepo.List(ctx)
+	if err != nil {
+		b.logger.Warn("获取相册数据失败", "error", err)
+		return nil
+	}
+
+	dateFormat := config.DateFormat
+	if dateFormat == "" {
+		dateFormat = "2006-01-02"
+	}
+
+	views := make([]template.GalleryView, 0, len(photos))
+	for _, p := range photos {
+		views = append(views, template.GalleryView{
+			ID:           p.ID,
+			Image:        p.Image,
+			Description:  p.Description,
+			IsTop:        p.IsTop,
+			CreatedAt:    formatDate(p.CreatedAt, dateFormat),
+			CreatedAtISO: p.CreatedAt.Format("2006-01-02"),
+			DateFormat:   dateFormat,
 		})
 	}
 	return views

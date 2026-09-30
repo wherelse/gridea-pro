@@ -32,6 +32,7 @@ type AppServices struct {
 	Setting              *SettingFacade
 	Comment              *CommentFacade
 	Memo                 *MemoFacade
+	Gallery              *GalleryFacade
 	Preview              *PreviewFacade
 	SeoSetting           *SeoSettingFacade
 	CdnSetting           *CdnSettingFacade
@@ -56,6 +57,7 @@ type AppServices struct {
 		Scaffold  *service.ScaffoldService
 		Comment   *service.CommentService
 		Memo      *service.MemoService
+		Gallery   *service.GalleryService
 		Preview   *service.PreviewService
 		CdnUpload *service.CdnUploadService
 	}
@@ -66,6 +68,7 @@ type AppServices struct {
 		Menu     domain.MenuRepository
 		Link     domain.LinkRepository
 		Memo     domain.MemoRepository
+		Gallery  domain.GalleryRepository
 		Setting  domain.SettingRepository
 	}
 	assets embed.FS // Keep reference for UpdateAppDir
@@ -90,6 +93,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 	settingRepo := repository.NewSettingRepository(appDir)
 	mediaRepo := repository.NewMediaRepository(appDir, imageOptimizeSettingRepo)
 	memoRepo := repository.NewMemoRepository(appDir)
+	galleryRepo := repository.NewGalleryRepository(appDir)
 	seoSettingRepo := repository.NewSeoSettingRepository(appDir)
 	cdnSettingRepo := repository.NewCdnSettingRepository(appDir)
 	pwaSettingRepo := repository.NewPwaSettingRepository(appDir)
@@ -125,6 +129,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 	rendererService.SetLinkRepo(linkRepo)
 	rendererService.SetTagRepo(tagRepo)
 	rendererService.SetMemoRepo(memoRepo)
+	rendererService.SetGalleryRepo(galleryRepo)
 	rendererService.SetCategoryRepo(categoryRepo)
 	// 渲染期间的非致命问题（如主题缺分类模板走了回退）推到界面上。
 	// 只写日志的话用户永远不会知道自己的站点渲染成了什么样。
@@ -144,6 +149,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 	commentRepo := repository.NewCommentRepository(appDir)
 	commentService := service.NewCommentService(appDir, commentRepo, postRepo, themeRepo, settingRepo)
 	memoService := service.NewMemoService(memoRepo)
+	galleryService := service.NewGalleryService(galleryRepo, appDir)
 	previewService := service.NewPreviewService(filepath.Join(appDir, "output"))
 	// Set CommentRepo on RendererService for template injection
 	rendererService.SetCommentRepo(commentRepo)
@@ -175,6 +181,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 		Setting:              NewSettingFacade(settingService, oauthService),
 		Comment:              NewCommentFacade(commentService),
 		Memo:                 NewMemoFacade(memoService),
+		Gallery:              NewGalleryFacade(galleryService),
 		Preview:              NewPreviewFacade(previewService),
 		SeoSetting:           NewSeoSettingFacade(seoSettingRepo),
 		CdnSetting:           NewCdnSettingFacade(cdnSettingRepo),
@@ -198,6 +205,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 			Scaffold  *service.ScaffoldService
 			Comment   *service.CommentService
 			Memo      *service.MemoService
+			Gallery   *service.GalleryService
 			Preview   *service.PreviewService
 			CdnUpload *service.CdnUploadService
 		}{
@@ -213,6 +221,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 			Scaffold:  scaffoldService,
 			Comment:   commentService,
 			Memo:      memoService,
+			Gallery:   galleryService,
 			Preview:   previewService,
 			CdnUpload: cdnUploadService,
 		},
@@ -223,6 +232,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 			Menu     domain.MenuRepository
 			Link     domain.LinkRepository
 			Memo     domain.MemoRepository
+			Gallery  domain.GalleryRepository
 			Setting  domain.SettingRepository
 		}{
 			Category: categoryRepo,
@@ -231,6 +241,7 @@ func NewAppServices(appDir string, assets embed.FS) *AppServices {
 			Menu:     menuRepo,
 			Link:     linkRepo,
 			Memo:     memoRepo,
+			Gallery:  galleryRepo,
 			Setting:  settingRepo,
 		},
 		assets: assets,
@@ -248,12 +259,13 @@ func (s *AppServices) InvalidateAllCaches() {
 	menu := s.Repositories.Menu
 	link := s.Repositories.Link
 	memo := s.Repositories.Memo
+	gallery := s.Repositories.Gallery
 	setting := s.Repositories.Setting
 	post := s.Repositories.Post
 	s.mu.RUnlock()
 
 	type invalidatable interface{ Invalidate() }
-	repos := []interface{}{category, tag, menu, link, memo, setting}
+	repos := []interface{}{category, tag, menu, link, memo, gallery, setting}
 	for _, r := range repos {
 		if inv, ok := r.(invalidatable); ok {
 			inv.Invalidate()
@@ -290,6 +302,7 @@ func (s *AppServices) UpdateAppDir(appDir string) {
 	s.Setting.internal.Store(newServices.Services.Setting)
 	s.Comment.internal.Store(newServices.Services.Comment)
 	s.Memo.internal.Store(newServices.Services.Memo)
+	s.Gallery.internal.Store(newServices.Services.Gallery)
 	s.Preview.internal.Store(newServices.Services.Preview)
 	s.SeoSetting.repo.Store(newServices.SeoSetting.repository())
 	s.CdnSetting.repo.Store(newServices.CdnSetting.repository())
@@ -308,6 +321,7 @@ func (s *AppServices) UpdateAppDir(appDir string) {
 	s.Services.Scaffold = newServices.Services.Scaffold
 	s.Services.Comment = newServices.Services.Comment
 	s.Services.Memo = newServices.Services.Memo
+	s.Services.Gallery = newServices.Services.Gallery
 	s.Services.Preview = newServices.Services.Preview
 	s.Services.CdnUpload = newServices.Services.CdnUpload
 
@@ -320,6 +334,7 @@ func (s *AppServices) UpdateAppDir(appDir string) {
 	s.Repositories.Menu = newServices.Repositories.Menu
 	s.Repositories.Link = newServices.Repositories.Link
 	s.Repositories.Memo = newServices.Repositories.Memo
+	s.Repositories.Gallery = newServices.Repositories.Gallery
 	s.Repositories.Setting = newServices.Repositories.Setting
 	// 2) Category/Tag Facade 各自持有的 postRepo —— 保存/删除分类标签时用它返回文章列表，
 	//    不更新会把旧站点的文章列表混进当前站点的返回结果。

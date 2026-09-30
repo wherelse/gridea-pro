@@ -152,6 +152,11 @@ func (s *Engine) SetMemoRepo(memoRepo domain.MemoRepository) {
 	s.dataBuilder.SetMemoRepo(memoRepo)
 }
 
+// SetGalleryRepo 设置相册仓库
+func (s *Engine) SetGalleryRepo(galleryRepo domain.GalleryRepository) {
+	s.dataBuilder.SetGalleryRepo(galleryRepo)
+}
+
 // SetCategoryRepo 设置分类仓库
 func (s *Engine) SetCategoryRepo(categoryRepo domain.CategoryRepository) {
 	s.dataBuilder.SetCategoryRepo(categoryRepo)
@@ -393,6 +398,7 @@ func (s *Engine) renderAllImpl(ctx context.Context) error {
 	asyncTasks := []renderTask{
 		{"友链页", func() error { return s.pageRenderer.RenderFriends(ctx, buildDir, templateData) }},
 		{"闪念页", func() error { return s.pageRenderer.RenderMemos(ctx, buildDir, templateData) }},
+		{"相册页", func() error { return s.pageRenderer.RenderGallery(ctx, buildDir, templateData) }},
 		{"404页面", func() error { return s.pageRenderer.Render404(buildDir, templateData) }},
 		{"搜索数据(search.json)", func() error { return s.searchBuilder.RenderSearchJSON(buildDir, templateData) }},
 		{"RSS订阅(feed.xml)", func() error {

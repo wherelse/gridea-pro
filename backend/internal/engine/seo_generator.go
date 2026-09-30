@@ -275,6 +275,20 @@ func (g *SeoGenerator) RenderSitemap(buildDir string, data *template.TemplateDat
 		})
 	}
 
+	// 4.5 相册页（有照片时才加入）
+	if len(data.Photos) > 0 {
+		galleryPath := data.ThemeConfig.GalleryPath
+		if galleryPath == "" {
+			galleryPath = DefaultGalleryPath
+		}
+		urlset.Urls = append(urlset.Urls, sitemapURL{
+			Loc:        safeUrl(domainUrl + "/" + galleryPath + "/"),
+			LastMod:    nowDate,
+			ChangeFreq: "weekly",
+			Priority:   "0.6",
+		})
+	}
+
 	// 5. 标签总览页
 	tagsPath := data.ThemeConfig.TagsPath
 	if tagsPath == "" {

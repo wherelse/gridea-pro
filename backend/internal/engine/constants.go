@@ -28,4 +28,5 @@ const (
 	DefaultCategoriesPath = "categories"
 	DefaultMemosPath      = "memos"
 	DefaultLinksPath      = "links"
+	DefaultGalleryPath    = "gallery"
 )

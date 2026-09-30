@@ -831,6 +831,40 @@ func (r *PageRenderer) RenderMemos(ctx context.Context, buildDir string, data *t
 	return r.manifest.WriteFile(filepath.Join(memosDir, FileIndexHTML), buf.Bytes(), 0644)
 }
 
+// RenderGallery 渲染相册页
+func (r *PageRenderer) RenderGallery(ctx context.Context, buildDir string, data *template.TemplateData) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	html, err := r.renderer.Render("gallery", data)
+	if err != nil {
+		r.logger.Error(fmt.Sprintf("相册页模板不存在或渲染失败: %v，跳过", err))
+		return nil
+	}
+
+	galleryPath := data.ThemeConfig.GalleryPath
+	if galleryPath == "" {
+		galleryPath = DefaultGalleryPath
+	}
+	html = r.postProcess(html, "gallery", "/"+galleryPath+"/", nil)
+
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+	buf.WriteString(html)
+
+	galleryDir := filepath.Join(buildDir, galleryPath)
+	if err := os.MkdirAll(galleryDir, 0755); err != nil {
+		return err
+	}
+
+	r.logger.Info("✅ 相册页渲染成功")
+	return r.manifest.WriteFile(filepath.Join(galleryDir, FileIndexHTML), buf.Bytes(), 0644)
+}
+
 // Render404 渲染 404 页面
 func (r *PageRenderer) Render404(buildDir string, data *template.TemplateData) error {
 	html, err := r.renderer.Render("404", data)

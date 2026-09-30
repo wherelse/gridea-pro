@@ -302,6 +302,7 @@ func Run(assets embed.FS, version string) {
 			services.Renderer,
 			services.Setting,
 			services.Memo,
+			services.Gallery,
 			services.Comment,
 			services.Preview,
 			services.SeoSetting,

@@ -46,6 +46,7 @@ type ThemeConfig struct {
 	CategoriesPath   string `json:"categoriesPath"`
 	LinkPath         string `json:"linkPath"`
 	MemosPath        string `json:"memosPath"`
+	GalleryPath      string `json:"galleryPath"`
 	// KatexEnabled 控制是否在站点渲染产物里自动注入 KaTeX 公式样式。
 	// 关闭后即使文章里有 `$...$` 公式，主题不会被注入 katex.min.css，
 	// 公式样式由主题自己负责（或不显示）。默认开。
