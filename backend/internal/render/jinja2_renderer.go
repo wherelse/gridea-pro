@@ -251,6 +251,7 @@ func (r *Jinja2Renderer) buildContext(data *template.TemplateData) pongo2.Contex
 		"categories": toContextValue(data.Categories),
 		"menus":      toContextValue(data.Menus),
 		"memos":      toContextValue(data.Memos),
+		"photos":     toContextValue(data.Photos),
 		"archives":   toContextValue(data.Archives),
 
 		// 友链数据
