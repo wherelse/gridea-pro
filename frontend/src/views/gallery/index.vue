@@ -36,9 +36,8 @@
     <div v-else class="flex-1 overflow-auto">
       <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
         <div v-for="(photo, index) in galleryStore.photos" :key="photo.id"
-          class="group relative rounded-lg border bg-card overflow-hidden" draggable="true"
-          @dragstart="onItemDragStart(index)" @dragover.prevent @drop.stop.prevent="onItemDrop(index)"
-          @dragend="dragIndex = -1">
+          class="group relative rounded-lg border bg-card overflow-hidden"
+          @dragover.prevent @drop.stop.prevent="onItemDrop(index)">
           <div class="relative aspect-square">
             <img :src="imgUrl(photo.image)" class="w-full h-full object-cover" loading="lazy" />
             <div v-if="photo.isTop"
@@ -54,13 +53,14 @@
               <Button size="icon" variant="destructive" :title="t('gallery.delete')" @click="removePhoto(photo.id)">
                 <TrashIcon class="w-4 h-4" />
               </Button>
-              <span class="cursor-move text-white/90" :title="t('gallery.dragHint')"><Bars3Icon class="w-4 h-4" /></span>
+              <span class="cursor-move text-white/90" :title="t('gallery.dragHint')" draggable="true"
+                @dragstart="onItemDragStart($event, index)" @dragend="dragIndex = -1"><Bars3Icon class="w-4 h-4" /></span>
             </div>
           </div>
-          <div class="p-2 space-y-1.5">
-            <Input v-model="photo.title" :placeholder="t('gallery.fieldTitle')"
+          <div class="p-2 space-y-1">
+            <Input v-model="photo.title" :placeholder="t('gallery.fieldTitle')" class="h-7 text-xs px-2"
               @blur="galleryStore.updatePhoto(photo)" @keyup.enter="galleryStore.updatePhoto(photo)" />
-            <Input v-model="photo.location" :placeholder="t('gallery.fieldLocation')"
+            <Input v-model="photo.location" :placeholder="t('gallery.fieldLocation')" class="h-7 text-xs px-2"
               @blur="galleryStore.updatePhoto(photo)" @keyup.enter="galleryStore.updatePhoto(photo)" />
             <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] leading-4 text-muted-foreground">
               <span v-if="photo.takenAt">{{ fmtDate(photo.takenAt) }}</span>
@@ -173,8 +173,10 @@ function removePhoto(id: string) {
 
 // 拖动排序
 let dragIndex = -1
-function onItemDragStart(index: number) {
+function onItemDragStart(e: DragEvent, index: number) {
   dragIndex = index
+  const card = (e.currentTarget as HTMLElement)?.closest('.group') as HTMLElement | null
+  if (card && e.dataTransfer) e.dataTransfer.setDragImage(card, 20, 20)
 }
 async function onItemDrop(index: number) {
   if (dragIndex < 0 || dragIndex === index) return
