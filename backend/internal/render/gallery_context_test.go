@@ -12,7 +12,7 @@ func TestBuildContextExposesPhotos(t *testing.T) {
 	r := &Jinja2Renderer{}
 	data := &template.TemplateData{
 		Photos: []template.GalleryView{
-			{ID: "a", Image: "/images/gallery/x.webp", Description: "d", IsTop: true},
+			{ID: "a", Image: "/images/gallery/x.webp", Title: "t", Location: "合肥", IsTop: true},
 		},
 	}
 
